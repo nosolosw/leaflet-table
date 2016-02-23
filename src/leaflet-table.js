@@ -1,9 +1,11 @@
 L.Control.Table = L.Control.extend({
   options: {
-    position:      'topright',
-    featIdProp:    'fid', // be sure it doesn't conflict with a GeoJSON property
-    featCodeProp:  'name',
-    featCodeTitle: 'Código',
+    position:       'topright',
+    featIdProp:     'fid', // be sure it doesn't conflict with a GeoJSON property
+    featCodeProp:   'name', // values in this prop are expected to be id-order
+    featOrderProp:  'order',
+    featCodeTitle:  'Código',
+    featOrderTitle: 'Orden',
     unselectedFeature: {
       radius:      8,
       fillColor:   "#ff7800",
@@ -41,13 +43,22 @@ L.Control.Table = L.Control.extend({
   },
 
   onAdd: function(map){
-    var title = this.options.featCodeTitle;
+    var codeTitle = this.options.featCodeTitle;
+    var orderTitle = this.options.featOrderTitle;
 
     // create table container
     var container = L.DomUtil.create('div', 'table-container');
     var table = this.table = L.DomUtil.create('table', 'scrollable', container);
-    table.innerHTML += '<thead><tr><th><strong>' + title + '</strong></th></tr></thead>';
+    var thead = this.thead = L.DomUtil.create('thead', '', table);
     var tbody = this.tbody = L.DomUtil.create('tbody', '', table);
+
+    // header
+    var header = '<thead><tr>';
+    header    += '<th><strong>' + codeTitle + '</strong></th>';
+    header    += '<th><strong>' + orderTitle + '</strong></th>';
+    header    += '</tr></thead>';
+    thead.innerHTML = header;
+
     // fill table with rows, if geoJsonLayer group has any layer
     var control = this;
     this.geoJsonLayer.eachLayer(function(layer){
@@ -89,7 +100,7 @@ L.Control.Table = L.Control.extend({
     var firstTR = this.tbody.firstChild;
     var tbody = this.tbody;
     this.selection.forEach(function(value, key){
-      var rowToMove = L.DomUtil.get('fid-' + key).parentNode;
+      var rowToMove = L.DomUtil.get('fid-' + key);
       tbody.insertBefore(rowToMove, firstTR);
     });
   },
@@ -106,17 +117,18 @@ L.Control.Table = L.Control.extend({
   },
 
   selectByRow: function(e){
-    if(e.target.id === (undefined || '')){
-      // it is not a cell or has no fid defined
+    var cell = e.target;
+    if(cell.id === (undefined || '')){
       return;
     }
-    // id equals to 'fid-123'
-    var fid = parseInt(e.target.id.split('-')[1]);
-    if(L.DomUtil.hasClass(e.target, 'selected')){
-      L.DomUtil.removeClass(e.target, 'selected');
+    // id equals to 'fid-123-celltype'
+    var fid = parseInt(cell.id.split('-')[1]);
+    var row = cell.parentElement;
+    if(L.DomUtil.hasClass(row, 'selected')){
+      L.DomUtil.removeClass(row, 'selected');
       this.unstyleFeature(fid);
     } else{
-      L.DomUtil.addClass(e.target, 'selected');
+      L.DomUtil.addClass(row, 'selected');
       this.styleFeature(fid);
     }
   },
@@ -164,13 +176,13 @@ L.Control.Table = L.Control.extend({
   },
 
   styleRow: function(fid){
-    var target = L.DomUtil.get('fid-' + fid);
-    L.DomUtil.addClass(target, 'selected');
+    var row = L.DomUtil.get('fid-' + fid);
+    L.DomUtil.addClass(row, 'selected');
   },
 
   unstyleRow: function(fid){
-    var target = L.DomUtil.get('fid-' + fid);
-    L.DomUtil.removeClass(target, 'selected');
+    var row = L.DomUtil.get('fid-' + fid);
+    L.DomUtil.removeClass(row, 'selected');
   },
 
   addRow: function(e){
@@ -179,27 +191,35 @@ L.Control.Table = L.Control.extend({
 
   doAddRow: function(table, layer){
     var fid = this.options.featIdProp,
-    code = this.options.featCodeProp;
+    code    = this.options.featCodeProp,
+    order   = this.options.featOrderProp;
 
     // add id
-    var props = layer.feature.properties;
-    props[fid] = layer._leaflet_id;
+    var props    = layer.feature.properties;
+    props[fid]   = layer._leaflet_id;
+    var values   = props[code].split('-');
+    props[code]  = values[0]; // overwrites original property
+    props[order] = values.length === 2 ? values[1] : props['time'];
 
     // add row
     var newRow = this.tbody.insertRow();
-    var newCell = newRow.insertCell();
-    newCell.setAttribute('id', 'fid-' + props[fid]);
-    newCell.appendChild(document.createTextNode(props[code]));
+    newRow.setAttribute('id', 'fid-' + props[fid]);
+    var cellId = newRow.insertCell();
+    cellId.setAttribute('id', 'fid-' + props[fid] + '-id');
+    cellId.appendChild(document.createTextNode(props[code]));
+    var cellOrder = newRow.insertCell();
+    cellOrder.setAttribute('id', 'fid-' + props[fid] + '-order');
+    cellOrder.appendChild(document.createTextNode(props[order]));
   },
 
   removeRow: function(e){
-    var td = L.DomUtil.get('fid-' + e.layer._leaflet_id);
-    this.table.deleteRow(td.parentNode.rowIndex);
+    var row = L.DomUtil.get('fid-' + e.layer._leaflet_id);
+    this.table.deleteRow(row.rowIndex);
   },
 
   editByRow: function(e){
-    if(e.target.id === (undefined || '')) {
-      // it is not a cell or has no fid defined
+    var cell = e.target;
+    if(cell.id === (undefined || '')){
       return;
     }
 
@@ -208,12 +228,13 @@ L.Control.Table = L.Control.extend({
       this.closePopup();
     }
 
-    var cellId = e.target.id;
-
-    var panel = "<div id='editPopup' style='left: -10px; min-width: 50px;' class='edit_text_dialog'><div class='content'><div><div class='field string'>" +
-    "<textarea id='textAreaEditPopup' style='min-width: 54px;' class='string_field dy'>" + e.target.textContent + "</textarea></div></div></div>" +
+    var panel = "<div id='editPopup' style='left: -10px; min-width: 50px;' class='edit_text_dialog'>" +
+    "<div class='content'><div><div class='field string'>" +
+    "<textarea id='textAreaEditPopup' style='min-width: 54px;' class='string_field dy'>" + e.target.textContent + "</textarea>" +
+    "</div></div></div>" +
     "<div class='foot'>" +
     "<a id='cancelEditPopup' class='left'>Cancelar</a>" +
+    " | " +
     "<a id='saveEditPopup' class='right'>Guardar</a>" +
     "</div>" +
     "</div>";
@@ -225,12 +246,12 @@ L.Control.Table = L.Control.extend({
     document.getElementById('textAreaEditPopup').addEventListener('keypress', function(event){
       var keycode = (event.keyCode ? event.keyCode : event.which);
       if(keycode == '13'){ // ENTER key was pressed
-        control.savePropertyAndClosePopup(cellId);
+        control.saveValueInRowAndCell(cell.id);
       }
     });
 
     document.getElementById("saveEditPopup").addEventListener("click", function( event ) {
-      control.savePropertyAndClosePopup(cellId);
+      control.saveValueInRowAndCell(cell.id);
     }, false);
 
     document.getElementById("cancelEditPopup").addEventListener("click", function( event ) {
@@ -243,27 +264,22 @@ L.Control.Table = L.Control.extend({
     L.DomUtil.get('editPopup').remove();
   },
 
-  savePropertyAndClosePopup: function(cellId){
-    var fidProp = this.options.featIdProp;
-    var codeProp = this.options.featCodeProp;
-    var popup = L.DomUtil.get('editPopup');
+  saveValueInRowAndCell: function(cellId){
     var newValue = L.DomUtil.get('textAreaEditPopup').value;
 
-    var fid = parseInt(cellId.split('-')[1]);
-
     // edit table row value
-    var cell = L.DomUtil.get(cellId);
-    cell.textContent = newValue;
+    L.DomUtil.get(cellId).textContent = newValue
 
     // edit layer property value
+    var fid = parseInt(cellId.split('-')[1]);
+    var fidProp = this.options.featIdProp;
+    var codeProp = this.options.featCodeProp;
     this.geoJsonLayer.eachLayer(function(layer){
       if(fid === layer.feature.properties[fidProp]){
         layer.feature.properties[codeProp] = newValue;
       }
     });
 
-    // remove popup
-    popup.remove();
   },
 
   makePolygon: function(){
