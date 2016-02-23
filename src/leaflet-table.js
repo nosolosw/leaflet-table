@@ -199,7 +199,7 @@ L.Control.Table = L.Control.extend({
     props[fid]   = layer._leaflet_id;
     var values   = props[code].split('-');
     props[code]  = values[0]; // overwrites original property
-    props[order] = values.length === 2 ? values[1] : props['time'];
+    props[order] = values.length === 2 ? values[1] : '';
 
     // add row
     var newRow = this.tbody.insertRow();
@@ -310,11 +310,13 @@ L.Control.Table = L.Control.extend({
 
     if (myarray.length < 3) return polygon;
 
-    var code = this.options.featCodeProp;
+    // if no order field is provided,
+    // the array would be sorted by the order items were added to it
+    var order = this.options.featOrderProp;
     myarray.sort(function(a, b){
-      if(a.properties[code] < b.properties[code]){
+      if(a.properties[order] < b.properties[order]){
         return -1;
-      } else if (a.properties[code] > b.properties[code]){
+      } else if (a.properties[order] > b.properties[order]){
         return 1;
       }
       return 0;
