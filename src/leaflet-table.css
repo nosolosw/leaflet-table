@@ -9,9 +9,20 @@
   border-radius: 4px;
   background: transparent linear-gradient(#FEFEFE, #F4F4F4) repeat scroll 0% 0%;
   border: 1px solid #B7B7B7;
-  max-width: 500px;
   max-height: 500px;
+  max-width: 150px;
+  min-width: 50px;
+  left: -10px;
   z-index: 0 !important;
+}
+
+.edit_text_dialog textarea{
+  max-width: 100px;
+  min-width: 50px;
+}
+
+.left{
+  float: left;
 }
 
 /* TABLE */

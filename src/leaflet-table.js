@@ -228,14 +228,12 @@ L.Control.Table = L.Control.extend({
       this.closePopup();
     }
 
-    var panel = "<div id='editPopup' style='left: -10px; min-width: 50px;' class='edit_text_dialog'>" +
-    "<div class='content'><div><div class='field string'>" +
-    "<textarea id='textAreaEditPopup' style='min-width: 54px;' class='string_field dy'>" + e.target.textContent + "</textarea>" +
-    "</div></div></div>" +
-    "<div class='foot'>" +
-    "<a id='cancelEditPopup' class='left'>Cancelar</a>" +
-    " | " +
-    "<a id='saveEditPopup' class='right'>Guardar</a>" +
+    var panel = "<div id='editPopup' class='edit_text_dialog'>" +
+    "<textarea id='textAreaEditPopup'>" + e.target.textContent + "</textarea>" +
+    "<div>" +
+    "<button id='cancelEditPopup'>Cancelar</button>" +
+    // "<span class='left' style='min-width: 10px'> | </span>" +
+    // "<button class='left' id='saveEditPopup'>Guardar</button>" +
     "</div>" +
     "</div>";
 
@@ -250,9 +248,9 @@ L.Control.Table = L.Control.extend({
       }
     });
 
-    document.getElementById("saveEditPopup").addEventListener("click", function( event ) {
-      control.saveValueInRowAndCell(cell.id);
-    }, false);
+    // document.getElementById("saveEditPopup").addEventListener("click", function( event ) {
+    //   control.saveValueInRowAndCell(cell.id);
+    // }, false);
 
     document.getElementById("cancelEditPopup").addEventListener("click", function( event ) {
       control.closePopup();
