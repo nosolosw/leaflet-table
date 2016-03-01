@@ -197,9 +197,13 @@ L.Control.Table = L.Control.extend({
     // add id
     var props    = layer.feature.properties;
     props[fid]   = layer._leaflet_id;
-    var values   = props[code].split('-');
-    props[code]  = values[0]; // overwrites original property
-    props[order] = values.length === 2 ? values[1] : '';
+    var lastIdxOfDash = props[code].lastIndexOf('-');
+    if ( lastIdxOfDash !== -1 ) {
+      props[order] = props[code].substring(lastIdxOfDash + 1);
+      props[code] = props[code].substring(0, lastIdxOfDash);
+    } else {
+      props[order] = ''
+    }
 
     // add row
     var newRow = this.tbody.insertRow();
